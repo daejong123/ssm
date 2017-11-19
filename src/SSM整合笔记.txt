@@ -1,0 +1,135 @@
+0. 创建目录大致结构
+1. 修改web.xml中的tdt版本
+    <web-app xmlns="http://java.sun.com/xml/ns/javaee"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+                          http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+             version="3.0">
+
+2. 在pom文件中修改项目和模块的语言级别是1.8
+    <plugins>
+          <!--修改项目和模块的语言级别是1.8 设置源码是1.8 编译的jdk也是1.8-->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>2.3.2</version>
+            <configuration>
+              <source>1.8</source>
+              <target>1.8</target>
+            </configuration>
+          </plugin>
+
+3. 集成springMVC
+    maven搜索库http://mvnrepository.com/
+    -1. 在pom.xml中添加依赖
+        a. spring-mvc
+        b. servlet-api provided
+        c. jstl
+    -2. 在resource目录下建立spring-mvc.xml配置文件
+        a. 添加注解驱动<mvc:annotation-driven />
+        b. 注册视图解析器
+        c. 扫描mvc组件
+    -3. 在web.xml中配置前端控制器dispatcherServlet
+        a. 配置随服务器启动而初始化
+        b. 配置参数contextConfigLocation指定springMVC配置文件的路径
+        c. 配置servletMapper请求--如仅处理*.do的请求.
+    -4. 在web.xml中配置请求和响应的字符编码处理过滤器
+        a. CharacterEncodingFilter.
+    -5. 配置404 500 欢迎界面等特殊的界面.
+    -6. 编写测试案例.
+
+4. 集成spring
+    -1. 添加spring依赖
+     集成springMVC的时候, 已经添加了spring的依赖了.
+    -2. 编写配置文件spring-context.xml
+        a. 配置注解事务管理
+        b. 扫描业务层组件
+    -3. 在web.xml中配置ContextLoaderListener监听器,启动spring容器.
+        配置contextConfigLocation, 指定spring-context.xml路径
+
+5. 配置C3P0
+    -1. 添加依赖
+        a. c3p0
+        b. mysql
+    -2. 在spring-context.xml中定义c3p0数据源ComboPooledDataSource
+        a. 配置属性
+            driverClass,jdbcUrl, username, password
+          <bean class="com.mchange.v2.c3p0.ComboPooledDataSource"
+                  id="dataSource">
+                <property name="driverClass" value="com.mysql.jdbc.Driver"/>
+                <property name="jdbcUrl" value="jdbc://mysql://localhost:3306/vip"/>
+                <property name="user" value="root"/>
+                <property name="password" value="daejong"/>
+                <property name="minPoolSize" value="1"/>
+                <property name="maxPoolSize" value="10"/>
+                <property name="initialPoolSize" value="5"/>
+                <property name="acquireIncrement" value="3"/>
+          </bean>
+        b.连接数相关的信息
+            minPoolSize, maxPoolSize, initialPoolSize, acquireIncrement等.
+
+6. 配置声明式事务管理
+    -1. 添加依赖
+        spring-tx
+        spring-jdbc
+    -2. 配置数据源事务管理DataSourceTransactionManager
+        指定数据源
+    -3. 指定通过注解控制事务.
+        <tx:transaction-driven />
+        指定事务管理器
+            <!--配置一个声明式事务管理器-->
+            <bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+                  id="dataSourceTransactionManager">
+                <property name="dataSource" ref="dataSource"/>
+            </bean>
+            <!--表示使用注解来控制事务.-->
+            <tx:annotation-driven transaction-manager="dataSourceTransactionManager"/>
+
+7. 集成mybatis
+    -1. 添加依赖
+        a. mybatis
+        b. mybatis-spring
+        c. pageHelper
+        d. cglib
+    -2. 编写mybatis配置文件
+        -1. 相关配置
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <!DOCTYPE configuration
+                PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+                "http://mybatis.org/dtd/mybatis-3-config.dtd">
+        <configuration>
+            <settings>
+                <setting name="cacheEnabled" value="true"/>
+                <setting name="proxyFactory" value="CGLIB"/>
+                <setting name="lazyLoadingEnabled" value="true"/>
+            </settings>
+
+            <plugins>
+                <plugin interceptor="com.github.pagehelper.PageHelper">
+                    <property name="dialect" value="mysql"/>
+                    <!--会将rowBounds的第一个参数offset当成pageNum的页码使用-->
+                    <property name="offsetAsPageNum" value="true"/>
+                    <!--使用rowBounds分页会进行count查询-->
+                    <property name="rowBoundsWithCount" value="true"/>
+                    <!--如果pageSize = 0 或者 rowBounds的limit为零, 就会查出所有结果
+                    ,相当于没有执行分页查询,但是返回结果任是 Page类型.-->
+                    <property name="pageSizeZero" value="true"/>
+                </plugin>
+            </plugins>
+        </configuration>
+    -3. 在spring-context.xml中配置SqlSessionFactoryBean
+        a. 指定数据源
+        b. 指定mybatis配置文件的路径
+        c. 指定mapper文件的路径.
+            <!--配置sqlsessionFactory 指定数据源和mybatis配置文件的路劲-->
+            <bean class="org.mybatis.spring.SqlSessionFactoryBean">
+                <property name="dataSource" ref="dataSource"/>
+                <property name="configLocation" value="classpath:mybatis-config.xml"/>
+            </bean>
+
+    -4. 在spring-context.xml配置扫描的mapper生成dao,(MapperScannerConfigurer)
+        a. 指定xml中配置SqlSessionFactoryBean
+        b. 指定要扫描的包
+
+8. 开始编写业务代码
+
